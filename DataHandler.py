@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
 import pickle
+from pathlib import Path
 
 class DataHandler:
     # dataset yoksa oluşturulur, varsa yüklenir
@@ -11,9 +12,13 @@ class DataHandler:
 
     # dataset oluşturulur veya yüklenir
     def create_or_load_dataset(self):
+        Path('./data').mkdir(parents=True, exist_ok=True)
         if self.check_dataset_exists():
             self.load_dataset()
-            self.load_train_test_validate()
+            if Path('./data/train_test_validate.pkl').exists():
+                self.load_train_test_validate()
+            else:
+                self.split_dataset()
         else:
             self.create_dataset()
     
@@ -31,16 +36,19 @@ class DataHandler:
         X, y = make_moons(n_samples=n_samples, noise=noise, random_state=random_state)
         self.X = X 
         self.y = y
+        self.save_dataset(X=X, y=y)
+        self.split_dataset(random_state)
+
+    def split_dataset(self, random_state=42):
         print('Splitting dataset into train, test and validate sets...')
-        X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.4, random_state=42)
-        X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+        X_train, X_temp, y_train, y_temp = train_test_split(self.X, self.y, test_size=0.4, random_state=random_state)
+        X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=random_state)
         self.X_train = X_train
         self.X_test = X_test
         self.X_val = X_val
         self.y_train = y_train
         self.y_test = y_test
         self.y_val = y_val
-        self.save_dataset(X=X, y=y)
         self.save_train_test_validate(X_train, X_test, X_val, y_train, y_test, y_val)
         
     # dataset kaydet
@@ -67,6 +75,7 @@ class DataHandler:
     
     # dataseti görselleştir ve kaydet
     def show_dataset(self,file_name='dataset_plot'):
+        Path('./results/data').mkdir(parents=True, exist_ok=True)
         plt.figure(figsize=(8, 6))
         plt.scatter(self.X[self.y == 0, 0], self.X[self.y == 0, 1], c='green', label='Sinif 0', alpha=0.6)
         plt.scatter(self.X[self.y == 1, 0], self.X[self.y == 1, 1], c='red', label='Sinif 1', alpha=0.6)
@@ -75,6 +84,7 @@ class DataHandler:
         plt.ylabel('Ozellik 2')
         plt.legend()
         plt.savefig('./results/data/'+file_name+'.png')
+        plt.close()
         #plt.show()
 
     def get_train_test_validate(self):

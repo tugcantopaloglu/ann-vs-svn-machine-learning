@@ -1,18 +1,22 @@
-from keras.api.layers import Dense
-from keras.api.models import Sequential
-from keras.api.optimizers import SGD
-from tensorflow.python.keras import backend as keras_backend
+from keras.layers import Dense
+from keras.models import Sequential
+from keras.optimizers import SGD
+from keras.metrics import Precision, Recall
+from keras import ops
+from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 # eğitimi bitince durdurma işlemi için earlystopping kullanıldı
-from tensorflow.python.keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping
 # yapay sinir ağı modelinin oluşturulması, derlenmesi, eğitilmesi ve sonuçlarının değerlendirilmesi işlemleri
 class NeuralNetwork:
     # epoch dosya adı oluşturulması
     def __init__(self, epochs):
         self.epochs = str(epochs)+'_epochs'+"/"
+        for name in ('loss', 'decision-boundary', 'confusion-matrix'):
+            (Path('./results/nn') / name / self.epochs).mkdir(parents=True, exist_ok=True)
     
     # yapay sinir ağı modelinin oluşturulması işlemi (giriş katmanı, gizli katmanlar ve çıkış katmanı)
     def create_ann_model(self, input_dim, hidden_layers=1):
@@ -27,25 +31,24 @@ class NeuralNetwork:
 
     # modelin derlenmesi işlemi (optimizasyon algoritması, loss fonksiyonu ve metriklerin belirlenmesi)
     def compile_model(self, model, learning_rate=0.01):
-        model.compile(optimizer=SGD(learning_rate=learning_rate), loss='binary_crossentropy', metrics=['accuracy', 'precision', 'recall',self.f1_score])
+        model.compile(optimizer=SGD(learning_rate=learning_rate), loss='binary_crossentropy', metrics=['accuracy', Precision(), Recall(), self.f1_score])
         
     # f1 score hesaplama işlemi
     def f1_score(self, y_true, y_pred):
-        y_true = keras_backend.cast(y_true, 'float32')
-        y_pred = keras_backend.round(y_pred) 
-        y_pred = keras_backend.cast(y_pred, 'float32')
-        tp = keras_backend.sum(y_true * y_pred, axis=0)
-        fp = keras_backend.sum((1 - y_true) * y_pred, axis=0)
-        fn = keras_backend.sum(y_true * (1 - y_pred), axis=0)
+        y_true = ops.reshape(ops.cast(y_true, 'float32'), (-1, 1))
+        y_pred = ops.cast(y_pred > 0.5, 'float32')
+        tp = ops.sum(y_true * y_pred)
+        fp = ops.sum((1 - y_true) * y_pred)
+        fn = ops.sum(y_true * (1 - y_pred))
 
-        precision = tp / (tp + fp + keras_backend.epsilon())
-        recall = tp / (tp + fn + keras_backend.epsilon()) 
-        f1 = 2 * (precision * recall) / (precision + recall + keras_backend.epsilon())
+        precision = tp / (tp + fp + 1e-7)
+        recall = tp / (tp + fn + 1e-7)
+        f1 = 2 * (precision * recall) / (precision + recall + 1e-7)
 
         return f1
     
     # modelin eğitilmesi işlemi (eğitim ve doğrulama verileri, epoch ve batch size parametreleri)
-    def train_model(self, model, X_train, y_train, X_val, y_val, epochs=100, batch_size=32):
+    def train_model(self, model, X_train, y_train, X_val, y_val, epochs=100, batch_size=1):
         early_stopping = EarlyStopping(monitor='val_loss', patience=25, verbose=0,restore_best_weights=True)
         return model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=epochs, batch_size=batch_size, verbose=0, callbacks=[early_stopping])
     
@@ -64,6 +67,7 @@ class NeuralNetwork:
         plt.ylabel('Loss')
         plt.legend()
         plt.savefig('./results/nn/loss/'+self.epochs+file_name+'.png')
+        plt.close()
         #plt.show()
     
     # karar sınırının çizdirilmesi işlemi (model, veri seti ve etiketler)
@@ -83,6 +87,7 @@ class NeuralNetwork:
         plt.xlabel('Ozellik 1')
         plt.ylabel('Ozellik 2')
         plt.savefig('./results/nn/decision-boundary/'+self.epochs+file_name+'.png')
+        plt.close()
         #plt.show()
     
     # aşırı öğrenme durumunun değerlendirilmesi işlemi (eğitim ve doğrulama kayıpları, model, eğitim ve doğrulama verileri)
@@ -118,8 +123,8 @@ class NeuralNetwork:
     
     # en iyi modelin seçilmesi işlemi (Stochastic Gradient Descent ve Mini Batch Gradient Descent modelleri, doğrulama verileri)
     def select_best_model(self, history_sgd, history_mini_batch, sgd_model, mini_batch_model, X_val, y_val):
-        sgd_val_loss = history_sgd.history['val_loss'][-1]
-        mini_batch_val_loss = history_mini_batch.history['val_loss'][-1]
+        sgd_val_loss = min(history_sgd.history['val_loss'])
+        mini_batch_val_loss = min(history_mini_batch.history['val_loss'])
 
         print("SGD Dogrulama Kaybi:", sgd_val_loss)
         print("Mini Batch Dogrulama Kaybi:", mini_batch_val_loss)

@@ -1,10 +1,10 @@
 import DataHandler
-import NeuralNetwork
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 
 # SVM için farklı kernel tipleri ve parametrelerini kullanarak modelleri eğitir ve doğrular
 class SupportVectorMachine:
@@ -13,11 +13,13 @@ class SupportVectorMachine:
         self.best_model = None
         self.best_kernel = None
         self.best_params = None
-        self.best_val_accuracy = 0
+        self.best_val_accuracy = -float('inf')
         self.models = []
 
     # SVM için farklı kernel tipleri ve parametrelerini kullanarak modelleri eğitir ve doğrular
     def train_and_evaluate(self):
+        self.models = []
+        self.best_val_accuracy = -float('inf')
         kernels = ['linear', 'poly', 'rbf']
         
         for kernel in kernels:
@@ -39,7 +41,7 @@ class SupportVectorMachine:
                         self.best_model = model
                         self.best_kernel = kernel
                         self.best_params = {'degree': degree}
-            if kernel == 'rbf':
+            elif kernel == 'rbf':
                 gammas = [0.1, 0.5, 1, 2, 5] # gamma parametresi için farklı değerler
                 for gamma in gammas:
                     model = SVC(kernel=kernel, C=1, gamma=gamma)
@@ -97,6 +99,7 @@ class SupportVectorMachine:
 
     # karar sınırlarını görselleştirir ve kaydeder
     def svm_plot(self):
+        Path('./results/svm').mkdir(parents=True, exist_ok=True)
         for idx, (model, kernel, params, val_accuracy) in enumerate(self.models):
             x_min, x_max = self.data.X[:, 0].min() - 1, self.data.X[:, 0].max() + 1
             y_min, y_max = self.data.X[:, 1].min() - 1, self.data.X[:, 1].max() + 1
@@ -113,10 +116,12 @@ class SupportVectorMachine:
             plt.xlabel('Özellik 1')
             plt.ylabel('Özellik 2')
             plt.savefig(f'./results/svm/svm_decision_boundary_{kernel}_{idx}.png')
+            plt.close()
             #plt.show()
     
     # karar sınırlarını en iyi model için görselleştirir ve kaydeder
     def svm_best_model_plot(self):
+        Path('./results/svm').mkdir(parents=True, exist_ok=True)
         x_min, x_max = self.data.X[:, 0].min() - 1, self.data.X[:, 0].max() + 1
         y_min, y_max = self.data.X[:, 1].min() - 1, self.data.X[:, 1].max() + 1
         xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01),
@@ -132,10 +137,12 @@ class SupportVectorMachine:
         plt.xlabel('Özellik 1')
         plt.ylabel('Özellik 2')
         plt.savefig('./results/svm/svm_best_decision_boundary.png')
+        plt.close()
         #plt.show()
     
     # confusion matrix görseli oluşturur ve kaydeder
     def svm_confusion_matrix(self, cm, file_name='confusion_matrix'):
+        Path('./results/svm/confusion-matrix').mkdir(parents=True, exist_ok=True)
         plt.figure(figsize=(8, 6))
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Negative', 'Positive'], yticklabels=['Negative', 'Positive'])
         plt.xlabel('Predicted Labels')
@@ -154,7 +161,3 @@ class SupportVectorMachine:
         print(cm)
         print(classification_report(self.data.y_test, test_predictions))
         self.svm_confusion_matrix(cm, file_name='best_model_test_confusion_matrix')
-
-        
-    
-    

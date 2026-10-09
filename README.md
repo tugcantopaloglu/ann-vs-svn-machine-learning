@@ -1,103 +1,61 @@
-# Machine Learning – ANN vs. SVM
+# ANN and SVM classification experiment
 
----
+An educational comparison of neural networks and Support Vector Machines on a synthetic two-moons binary dataset. The repository name retains its original `svn` spelling; the implemented classifier is SVM.
 
-## 1 Overview
+## Setup
 
-Binary‑classification homework comparing **Artificial Neural Networks (ANN)** and **Support Vector Machines (SVM)**.  
-Training loops run for **100 / 1 000 / 10 000** epochs with **early stopping**, so the full 10 000 may not be reached.
-
-> **Tip** – If you see “`./data/dataset.pkl` not found”, open the **project root** (see screenshot _How_the_Folder_Should_Look.png_) in VS Code / your IDE. Running from a different CWD will break the relative paths.
-
----
-
-## 2 Methods
-
-### 2.1 ANN
-
-- 1, 2 and 3 hidden‑layer architectures
-- Optimisers: **SGD** and **Mini‑Batch GD**
-- Training/validation loss and decision boundaries plotted
-- Best model selected & tested
-
-### 2.2 SVM
-
-- Kernels: **Linear**, **Polynomial** (varying degree), **Gaussian RBF** (varying γ)
-- Decision boundaries plotted for all variants
-- Best model selected & tested
-
----
-
-## 3 Requirements
-
-| Library      | Version                                |
-| ------------ | -------------------------------------- |
-| numpy        | 2.2.1                                  |
-| pandas       | – (comes with sklearn)                 |
-| matplotlib   | 3.10.0                                 |
-| seaborn      | 0.13.2                                 |
-| scikit‑learn | 1.6.0                                  |
-| keras        | 3.7.0                                  |
-| tensorflow   | 2.18.0 (`tensorflow-intel` also works) |
-
-Install:
+Use Python 3.11 or 3.12; the fixture suite targets Python 3.12. TensorFlow 2.18 requires NumPy below 2.1, so `requirements.txt` uses NumPy 2.0.2 with TensorFlow 2.18. Keras is updated within 3.x to [3.15.0](https://pypi.org/project/keras/3.15.0/) to address known advisories affecting the earlier pin; that Keras version requires Python 3.11 or newer. TensorFlow installation is substantially larger than the SVM dependencies.
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/tugcantopaloglu/ann-vs-svn-machine-learning.git
+cd ann-vs-svn-machine-learning
+python -m venv .venv
 ```
 
-GPU on macOS → add `tensorflow-metal`.
+Activate the environment (`.venv\Scripts\Activate.ps1` in PowerShell, or `source .venv/bin/activate` on Linux/macOS), then:
 
----
-
-## 4 Repo Layout
-
-```
-project_root/
-├── data/
-│   ├── dataset.pkl
-│   └── train_test_validate.pkl
-├── results/
-│   ├── nn/   # ANN plots + CM
-│   └── svm/  # SVM confusion matrices
-├── DataHandler.py
-├── NeuralNetwork.py
-├── NeuralNetworkHandler.py
-├── SupportVectorMachine.py
-├── main.py
-└── requirements.txt
+```bash
+python -m pip install -r requirements.txt
+python -m pip check
 ```
 
----
+Run all commands from the repository root because data and result paths are relative to the working directory. Pandas is installed through Seaborn's dependencies; scikit-learn does not supply Pandas.
 
-## 5 Run
+## Data
+
+`DataHandler` loads `data/dataset.pkl` and `data/train_test_validate.pkl` when available. If the dataset cache is absent, it creates 400 samples with `make_moons(noise=0.2, random_state=42)` and 60% training, 20% validation and 20% test splits. If only the split cache is missing, it rebuilds the splits from the loaded dataset. Data and output directories are created as needed.
+
+The pickle files are trusted local caches. Python pickle loading can execute code; do not replace them with downloaded or untrusted files. Dataset generation and splitting are seeded, but ANN initialization and training are not seeded, so ANN runs can differ.
+
+## Full experiment
 
 ```bash
 python main.py
 ```
 
-The script will create splits if absent and write all artefacts to **`results/`**.
+The active entry point trains ANN candidates for up to 10,000 epochs with early stopping (patience 25 on validation loss, restoring the best weights). The 100- and 1,000-epoch blocks in `main.py` are disabled. This is a potentially long experiment, not the bounded regression command.
 
----
+ANN candidates have one, two or three hidden layers, each with 10 sigmoid units. Each depth is trained with sample-wise SGD (batch size 1) and mini-batch SGD (batch size 32). Candidates are ranked by the minimum recorded validation loss, matching the restored best-epoch weights. The final test split is used for evaluation after selection. The custom Keras F1 is a batch metric; the printed scikit-learn classification report computes metrics over the entire evaluated split.
 
-## 6 Outputs
+SVM selection compares 12 candidates on validation accuracy: one linear kernel, polynomial degrees 1 through 6, and RBF gamma values 0.1, 0.5, 1, 2 and 5. The selected model is evaluated on the test split. Decision-boundary figures use the full dataset for display, while fitting uses only training data.
 
-- `results/nn/decision-boundary/*` – decision boundary PNGs per epoch setting
-- `results/nn/loss/*` – loss curves
-- `results/nn/confusion-matrix/*` – confusion matrices
-- `results/svm/confusion-matrix/` – SVM matrices
-- `results/program_output.txt` – full console log (auto‑generated; replicate with `python main.py > program_output.txt`)
+## Outputs and provenance
 
----
+Plots are written under `results/data`, `results/nn/loss/<epochs>_epochs`, `results/nn/decision-boundary/<epochs>_epochs`, `results/nn/confusion-matrix/<epochs>_epochs` and `results/svm`. PNG files with the same names are overwritten. Console output is printed, not automatically saved; capture a run explicitly if needed:
 
-## 7 Notes
+```bash
+python main.py > results/new_run_output.txt
+```
 
-- Dataset auto‑generated & cached under `data/`.
-- Code is modular – each algorithm in its own class.
-- Output files are appended on new runs.
+`Report.pdf`, `results/program_output.txt` and the checked-in figures are historical artifacts whose exact environment and ANN seed are not recorded. They were not regenerated by the regression tests. Earlier ANN selection used the final epoch's loss despite restoring best weights, and both training methods used the same batch size. Historical scores therefore are not benchmarks for the corrected comparison. No new full-experiment or deployment metrics are claimed.
 
----
+## Bounded regression checks
 
-## 8 Author
+```bash
+python -m pip install pytest
+python -m pytest -q
+```
 
-Tuğcan Topaloğlu
+The suite includes checks for fresh dataset/output handling, missing split-cache recovery, a small SVM search including zero-score selection, best-epoch ANN selection with a fixture, binary F1 shape handling, and public Keras compilation plus one epoch on four samples. It does not run the 10,000-epoch experiment or reproduce the historical report. This local maintenance candidate remains unverified at runtime: package installation stalled after a Windows TLS error, so the TensorFlow fixture suite has not been run successfully.
+
+Licensed under the [MIT License](LICENSE).

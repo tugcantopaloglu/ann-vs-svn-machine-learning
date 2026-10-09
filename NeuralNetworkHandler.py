@@ -1,5 +1,4 @@
 import DataHandler
-import NeuralNetwork
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
@@ -24,7 +23,7 @@ class NeuralNetworkHandler:
             ann_model = self.nn.create_ann_model(input_dim=self.data.X_train.shape[1], hidden_layers=i)
             self.nn.compile_model(ann_model, learning_rate=0.01)
             ann_model_history = self.nn.train_model(ann_model, self.data.X_train, self.data.y_train, self.data.X_val, self.data.y_val, epochs=self.epochs)
-            val_loss = ann_model_history.history['val_loss'][-1]
+            val_loss = min(ann_model_history.history['val_loss'])
 
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
@@ -40,7 +39,7 @@ class NeuralNetworkHandler:
             ann_model_mini_batch = self.nn.create_ann_model(input_dim=self.data.X_train.shape[1], hidden_layers=i)
             self.nn.compile_model(ann_model_mini_batch, learning_rate=0.01)
             ann_model_mini_batch_history = self.nn.train_with_mini_batch(ann_model_mini_batch, self.data.X_train, self.data.y_train, self.data.X_val, self.data.y_val, batch_size=32, epochs=self.epochs)
-            val_loss_mini_batch = ann_model_mini_batch_history.history['val_loss'][-1]
+            val_loss_mini_batch = min(ann_model_mini_batch_history.history['val_loss'])
 
             if val_loss_mini_batch < self.best_val_loss:
                 self.best_val_loss = val_loss_mini_batch
