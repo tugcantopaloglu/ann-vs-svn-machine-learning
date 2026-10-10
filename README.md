@@ -35,7 +35,7 @@ python main.py
 
 The active entry point trains ANN candidates for up to 10,000 epochs with early stopping (patience 25 on validation loss, restoring the best weights). The 100- and 1,000-epoch blocks in `main.py` are disabled. This is a potentially long experiment, not the bounded regression command.
 
-ANN candidates have one, two or three hidden layers, each with 10 sigmoid units. Each depth is trained with sample-wise SGD (batch size 1) and mini-batch SGD (batch size 32). Candidates are ranked by the minimum recorded validation loss, matching the restored best-epoch weights. The final test split is used for evaluation after selection. The custom Keras F1 is a batch metric; the printed scikit-learn classification report computes metrics over the entire evaluated split.
+ANN candidates have one, two or three hidden layers, each with 10 sigmoid units. Each depth is trained with sample-wise SGD (batch size 1) and mini-batch SGD (batch size 32). Candidates are ranked by the minimum recorded validation loss, matching the restored best-epoch weights. Each search starts a new selection. The final test split is used for evaluation after selection. The custom Keras F1 is a batch metric; the printed scikit-learn classification report computes metrics over the entire evaluated split. The overfitting diagnostic compares the final recorded training and validation losses, while its predictions use the restored model weights.
 
 SVM selection compares 12 candidates on validation accuracy: one linear kernel, polynomial degrees 1 through 6, and RBF gamma values 0.1, 0.5, 1, 2 and 5. The selected model is evaluated on the test split. Decision-boundary figures use the full dataset for display, while fitting uses only training data.
 
@@ -56,6 +56,6 @@ python -m pip install pytest
 python -m pytest -q
 ```
 
-The suite includes checks for fresh dataset/output handling, missing split-cache recovery, a small SVM search including zero-score selection, best-epoch ANN selection with a fixture, binary F1 shape handling, and public Keras compilation plus one epoch on four samples. It does not run the 10,000-epoch experiment or reproduce the historical report. This local maintenance candidate remains unverified at runtime: package installation stalled after a Windows TLS error, so the TensorFlow fixture suite has not been run successfully.
+The suite checks fresh dataset/output handling, complete cache round trips, missing split-cache recovery, repeated ANN/SVM searches, zero-score SVM selection, best-epoch ANN selection, binary F1 shapes and empty-positive cases, and public Keras compilation plus one epoch on four samples. A TensorFlow training test verifies early stopping restores the weights from the best validation epoch. An import check confirms startup does not launch training; a bounded entry-point check runs all six ANN candidates for one epoch each and all 12 SVM candidates on 40 generated samples, including the plotting and evaluation paths. All 15 tests passed on Windows with Python 3.12.11 and the pinned runtime dependencies. The suite does not run the 10,000-epoch experiment or reproduce the historical report.
 
 Licensed under the [MIT License](LICENSE).

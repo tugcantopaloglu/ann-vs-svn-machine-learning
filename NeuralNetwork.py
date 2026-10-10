@@ -2,7 +2,7 @@ from keras.layers import Dense
 from keras.models import Sequential
 from keras.optimizers import SGD
 from keras.metrics import Precision, Recall
-from keras import ops
+from keras import Input, ops
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
@@ -21,7 +21,8 @@ class NeuralNetwork:
     # yapay sinir ağı modelinin oluşturulması işlemi (giriş katmanı, gizli katmanlar ve çıkış katmanı)
     def create_ann_model(self, input_dim, hidden_layers=1):
         model = Sequential()
-        model.add(Dense(10, input_dim=input_dim, activation='sigmoid'))
+        model.add(Input(shape=(input_dim,)))
+        model.add(Dense(10, activation='sigmoid'))
 
         for _ in range(hidden_layers - 1):
             model.add(Dense(10, activation='sigmoid'))

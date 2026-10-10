@@ -17,6 +17,10 @@ class NeuralNetworkHandler:
 
     # eğitim ve değerlendirme işlemlerinin yapılması ve sonuçların yazdırılması işlemi (her bir gizli katman için)
     def train_and_evaluate(self):
+        self.best_model = None
+        self.best_val_loss = float('inf')
+        self.best_method = None
+        self.best_hidden_layers = None
         # her bir gizli katman için yapay sinir ağı modelinin oluşturulması, eğitilmesi ve değerlendirilmesi işlemleri
         for i in range(1, 4):
             print(f"Stochastic Gradient Descent ile egitim basliyor (Gizli Katmanlar: {i})...")
